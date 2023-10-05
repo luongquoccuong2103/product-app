@@ -1,14 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import Chart from 'chart.js/auto';
+import { Line } from 'react-chartjs-2';
 
-const ChartComponent = () => {
+const TimelineChart = () => {
   const [productData, setProductData] = useState([]);
+  const [selectedProducts, setSelectedProducts] = useState({});
+  const [productColors, setProductColors] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await axios.get('http://localhost:3000/products');
+        const initialSelectedProducts = {};
+        const initialProductColors = {};
+        response.data.forEach((product, index) => {
+          initialSelectedProducts[product.id] = false; // Initially select all products
+          // Assign a color to each product based on its index
+          initialProductColors[product.id] = `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(
+            Math.random() * 256
+          )}, ${Math.floor(Math.random() * 256)}, 1)`;
+        });
+        setSelectedProducts(initialSelectedProducts);
+        setProductColors(initialProductColors);
         setProductData(response.data);
       } catch (error) {
         console.error('Error fetching product data:', error);
@@ -18,45 +31,48 @@ const ChartComponent = () => {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    if (productData.length === 0) return;
+  const generateRandomData = () => {
+    return productData
+      .filter(product => selectedProducts[product.id]) // Filter based on selected products
+      .map(product => ({
+        label: product.name,
+        borderColor: productColors[product.id], // Use assigned color for the product
+        fill: false,
+        data: Array.from({ length: 10 }, (_, index) => ({
+          x: `Time ${index + 1}`,
+          y: Math.floor(Math.random() * 100), // Random click count
+        })),
+      }));
+  };
 
-    // Generate random click counts for each product
-    const updatedProductData = productData.map(product => ({
-      ...product,
-      clickCount: Math.floor(Math.random() * 100) // Replace with your desired range
+  const handleProductToggle = productId => {
+    setSelectedProducts(prevSelectedProducts => ({
+      ...prevSelectedProducts,
+      [productId]: !prevSelectedProducts[productId],
     }));
+  };
 
-    const labels = updatedProductData.map(product => product.name);
-    const data = updatedProductData.map(product => product.clickCount);
-
-    const chartNode = document.getElementById('myChart');
-    const chart = new Chart(chartNode, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Số lần click',
-          data,
-          backgroundColor: 'rgba(54, 162, 235, 0.5)',
-          borderColor: 'rgba(54, 162, 235, 1)',
-          borderWidth: 1
-        }]
-      },
-      options: {
-        scales: {
-          x: { beginAtZero: true },
-          y: { beginAtZero: true }
-        }
-      }
-    });
-
-    return () => {
-      chart.destroy(); // Cleanup chart on component unmount
-    };
-  }, [productData]);
-
-  return <canvas id="myChart" style={{ width: '60%', height: '300px' }} />;
+  return (
+    <div>
+      <div>
+        {productData.map(product => (
+          <label
+            key={product.id}
+            style={{ marginRight: '20px', color: productColors[product.id], cursor: 'pointer' }}
+            onClick={() => handleProductToggle(product.id)}
+          >
+            <input type="checkbox" checked={selectedProducts[product.id]} readOnly />
+            {product.name}
+          </label>
+        ))}
+      </div>
+      <div>
+        <Line
+          data={{ labels: Array.from({ length: 10 }, (_, index) => `Time ${index + 1}`), datasets: generateRandomData() }}
+        />
+      </div>
+    </div>
+  );
 };
 
-export default ChartComponent;
+export default TimelineChart;
