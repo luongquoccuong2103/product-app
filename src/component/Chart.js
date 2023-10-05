@@ -10,7 +10,7 @@ const TimelineChart = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/products');
+        const response = await axios.get('http://localhost:8100/products');
         const initialSelectedProducts = {};
         const initialProductColors = {};
         response.data.forEach((product, index) => {
